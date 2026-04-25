@@ -334,7 +334,7 @@ h1 {
             <span id="listenStatus">状态：未开启</span>
         </div>
 
-        <p class="cmd-tip" id="cmdTip">指令：我赢 你赢 他赢 撤销 不算</p>
+        <p class="cmd-tip" id="cmdTip">指令：我赢 / me = 甲加分；他 / he / his / hey / he's = 乙加分；撤销 / undo</p>
 
         <div class="voice-debug" id="voiceDebug">语音：等待输入</div>
 
@@ -413,7 +413,7 @@ const texts = {
         voiceOff: "关闭监听",
         listenOff: "状态：未开启",
         listenOn: "状态：监听中",
-        cmdTip: "指令：我赢 你赢 他赢 撤销 不算",
+        cmdTip: "指令：我赢 / me = 甲加分；他 / he / his / hey / he's = 乙加分；撤销 / undo",
         voiceWaiting: "语音：等待输入",
         voiceHeard: "识别：",
         voiceExecuting: "执行：",
@@ -455,7 +455,7 @@ const texts = {
         voiceOff: "Stop Listening",
         listenOff: "Status: Off",
         listenOn: "Status: Listening",
-        cmdTip: "Commands: mine yours his undo cancel",
+        cmdTip: "Commands: me = A point; he / his / hey / he's = B point; undo = undo",
         voiceWaiting: "Voice: waiting",
         voiceHeard: "Heard: ",
         voiceExecuting: "Running: ",
@@ -517,7 +517,7 @@ function getPlayerName(player) {
 function normalizeCommand(text) {
     return text
         .toLowerCase()
-        .replace(/[，。！？,.!?]/g, "")
+        .replace(/[，。！？,.!?'"’‘“”]/g, "")
         .replace(/\s+/g, " ")
         .trim();
 }
@@ -529,33 +529,46 @@ function detectVoiceCommand(rawText) {
         cmd.includes("撤销") ||
         cmd.includes("不算") ||
         cmd.includes("undo") ||
+        cmd.includes("cancel") ||
         cmd.includes("redo") ||
-        cmd.includes("cancel");
+        cmd.includes("go back");
 
     const isMine =
         cmd.includes("我赢") ||
         cmd.includes("我赢了") ||
         cmd === "我" ||
+        cmd === "me" ||
         cmd.includes("mine") ||
         cmd.includes("my point") ||
-        cmd === "me" ||
         cmd.includes("i win") ||
-        cmd.includes("i won");
+        cmd.includes("i won") ||
+        cmd.includes("for me");
 
-    const isOpponent =
-        cmd.includes("你赢") ||
-        cmd.includes("你赢了") ||
-        cmd.includes("他赢") ||
-        cmd.includes("他赢了") ||
-        cmd.includes("yours") ||
-        cmd.includes("your point") ||
-        cmd === "you" ||
-        cmd.includes("you win") ||
-        cmd.includes("you won") ||
-        cmd.includes("his") ||
-        cmd.includes("his point") ||
-        cmd.includes("he wins") ||
-        cmd.includes("he won");
+    const opponentKeywords = [
+        "你", "你赢", "你赢了",
+        "他", "他赢", "他赢了",
+        "you", "your", "yours", "your point", "you win", "you won",
+        "his", "his point",
+        "he", "he win", "he wins", "he won",
+        "hey", "heys", "hey s",
+        "hes", "hes point",
+        "hiss", "hiz", "hay"
+    ];
+
+    let isOpponent = false;
+
+    for (let k of opponentKeywords) {
+        if (
+            cmd === k ||
+            cmd.startsWith(k + " ") ||
+            cmd.includes(" " + k + " ") ||
+            cmd.endsWith(" " + k) ||
+            cmd.includes(k)
+        ) {
+            isOpponent = true;
+            break;
+        }
+    }
 
     if (isUndo) return { type: "undo", raw: rawText, normalized: cmd };
     if (isMine) return { type: "A", raw: rawText, normalized: cmd };
@@ -579,7 +592,7 @@ function processVoiceCommand(rawText) {
     pendingTimer = setTimeout(() => {
         executeVoiceCommand(pendingCommand);
         pendingCommand = null;
-    }, 650);
+    }, 500);
 }
 
 function executeVoiceCommand(command) {
@@ -595,7 +608,7 @@ function executeVoiceCommand(command) {
     const now = Date.now();
     const commandKey = command.type + "|" + command.normalized;
 
-    if (commandKey === lastExecutedCommand && now - lastExecutedTime < 1400) {
+    if (commandKey === lastExecutedCommand && now - lastExecutedTime < 1200) {
         return;
     }
 
@@ -632,7 +645,7 @@ function initVoice() {
     recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 5;
 
     updateVoiceLang();
 
@@ -645,17 +658,18 @@ function initVoice() {
         const result = event.results[event.results.length - 1];
         if (!result.isFinal) return;
 
-        let bestText = "";
+        let allText = "";
 
         for (let i = 0; i < result.length; i++) {
             if (result[i] && result[i].transcript) {
-                bestText = result[i].transcript;
-                break;
+                allText += " " + result[i].transcript;
             }
         }
 
-        if (bestText) {
-            processVoiceCommand(bestText);
+        allText = allText.trim();
+
+        if (allText) {
+            processVoiceCommand(allText);
         }
     };
 
@@ -674,14 +688,14 @@ function initVoice() {
                 } catch (e) {
                     console.warn("voice restart failed:", e);
                 }
-            }, 250);
+            }, 300);
         }
     };
 }
 
 function updateVoiceLang() {
     if (!recognition) return;
-    recognition.lang = lang === "zh" ? "zh-CN" : "en-US";
+    recognition.lang = "en-US";
 }
 
 function toggleVoice() {
