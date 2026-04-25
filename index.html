@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>乒乓球计分器</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+    background-color: #f5f7fa;
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.container {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+h1 {
+    text-align: center;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+    font-size: 20px;
+}
+
+.lang-switch {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.lang-btn {
+    padding: 6px 14px;
+    margin: 0 4px;
+    border: none;
+    border-radius: 6px;
+    background: #eee;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.lang-btn.active {
+    background: #1976D2;
+    color: white;
+}
+
+.input-group {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.input-group label {
+    width: 50px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.match-name {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.voice-section {
+    margin: 16px 0;
+    font-size: 13px;
+}
+
+.voice-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.voice-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #ccc;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.voice-btn.on {
+    background: #00C853;
+}
+
+.cmd-tip {
+    color: #1976D2;
+    font-weight: 500;
+    margin: 6px 0;
+}
+
+.voice-debug {
+    text-align: center;
+    font-size: 15px;
+    color: #1976D2;
+    background: #eef6ff;
+    padding: 8px;
+    border-radius: 8px;
+    margin: 10px 0;
+    min-height: 36px;
+}
+
+.point-mode {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.mode-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #f0f0f0;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.mode-btn.active {
+    background: #1976D2;
+    color: white;
+}
+
+.format-buttons {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.format-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    background: #f0f0f0;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.format-btn.active {
+    background: #1976D2;
+    color: white;
+}
+
+.score-board {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.player-score {
+    flex: 1;
+}
+
+.player-name {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.score {
+    font-size: 48px;
+    font-weight: bold;
+    color: #1976D2;
+}
+
+.vs-info {
+    text-align: center;
+    font-size: 14px;
+}
+
+.vs-text {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.server {
+    color: #e53935;
+    font-weight: 500;
+    margin: 4px 0;
+}
+
+.game-score {
+    color: #333;
+    font-size: 13px;
+}
+
+.alert {
+    text-align: center;
+    color: #e53935;
+    font-size: 16px;
+    font-weight: bold;
+    margin: 8px 0;
+    min-height: 22px;
+}
+
+.control-buttons,
+.export-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.control-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background: #1976D2;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.start-btn {
+    background: #00A152;
+}
+
+.save-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background: #FF80AB;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.excel-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background: #FF9800;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.score-adjust {
+    margin-top: 8px;
+}
+
+.adjust-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: none;
+    background: #1976D2;
+    font-size: 30px;
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+}
+
+.game-history {
+    margin: 16px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.game-history h3 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.history-item {
+    text-align: center;
+    padding: 2px 0;
+    color: #444;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1 id="title">乒乓球计分器</h1>
+
+    <div class="lang-switch">
+        <button class="lang-btn active" data-lang="zh">中文</button>
+        <button class="lang-btn" data-lang="en">English</button>
+    </div>
+
+    <div class="input-group">
+        <label id="labelA">甲：</label>
+        <input type="text" id="playerA" placeholder="球员甲">
+    </div>
+
+    <div class="input-group">
+        <label id="labelB">乙：</label>
+        <input type="text" id="playerB" placeholder="球员乙">
+    </div>
+
+    <input type="text" class="match-name" id="matchName" placeholder="比赛名称">
+
+    <div class="voice-section">
+        <p id="voiceTip">请开启语音监听</p>
+
+        <div class="voice-toggle">
+            <button class="voice-btn" id="voiceToggle">开启监听</button>
+            <span id="listenStatus">状态：未开启</span>
+        </div>
+
+        <p class="cmd-tip" id="cmdTip">指令：我赢 你赢 他赢 撤销 不算</p>
+
+        <div class="voice-debug" id="voiceDebug">语音：等待输入</div>
+
+        <div class="point-mode">
+            <button class="mode-btn active" data-mode="11" id="btn11">11分制</button>
+            <button class="mode-btn" data-mode="21" id="btn21">21分制</button>
+        </div>
+    </div>
+
+    <div class="format-buttons">
+        <button class="format-btn active" data-format="2" id="fmt2">三局两胜</button>
+        <button class="format-btn" data-format="3" id="fmt3">五局三胜</button>
+        <button class="format-btn" data-format="5" id="fmt5">七局五胜</button>
+    </div>
+
+    <div class="score-board">
+        <div class="player-score">
+            <div class="player-name" id="showAName">球员甲</div>
+            <div class="score" id="scoreA">0</div>
+            <div class="score-adjust">
+                <button class="adjust-btn" onclick="addPoint('A')">+</button>
+            </div>
+        </div>
+
+        <div class="vs-info">
+            <div class="vs-text" id="vsText">对阵</div>
+            <div class="server" id="server">发球：球员甲</div>
+            <div class="game-score" id="gameScore">局分：0 : 0</div>
+        </div>
+
+        <div class="player-score">
+            <div class="player-name" id="showBName">球员乙</div>
+            <div class="score" id="scoreB">0</div>
+            <div class="score-adjust">
+                <button class="adjust-btn" onclick="addPoint('B')">+</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-history">
+        <h3 id="historyTitle">比赛记录</h3>
+        <div id="historyList"></div>
+    </div>
+
+    <div class="alert" id="alertBox"></div>
+
+    <div class="control-buttons">
+        <button class="control-btn start-btn" id="btnStart" onclick="startNextGame()">▶ 开始下一局</button>
+    </div>
+
+    <div class="control-buttons">
+        <button class="control-btn" id="btnUndo" onclick="undo()">↩ 撤销</button>
+        <button class="control-btn" id="btnResetGame" onclick="resetCurrent()">🔄 重置本局</button>
+        <button class="control-btn" id="btnResetMatch" onclick="resetAll()">⛔ 重置全场</button>
+    </div>
+
+    <div class="export-buttons">
+        <button class="save-btn" id="btnSave" onclick="saveGame()">💾 保存</button>
+        <button class="excel-btn" id="btnExport" onclick="exportExcel()">📊 导出Excel</button>
+    </div>
+</div>
+
+<script>
+const texts = {
+    zh: {
+        title: "乒乓球计分器",
+        labelA: "甲：",
+        labelB: "乙：",
+        showA: "球员甲",
+        showB: "球员乙",
+        phA: "球员甲",
+        phB: "球员乙",
+        phMatch: "比赛名称",
+        voiceTip: "请开启语音监听",
+        voiceOn: "开启监听",
+        voiceOff: "关闭监听",
+        listenOff: "状态：未开启",
+        listenOn: "状态：监听中",
+        cmdTip: "指令：我赢 你赢 他赢 撤销 不算",
+        voiceWaiting: "语音：等待输入",
+        voiceHeard: "识别：",
+        voiceExecuting: "执行：",
+        voiceUnknown: "未识别有效指令：",
+        btn11: "11分制",
+        btn21: "21分制",
+        fmt2: "三局两胜",
+        fmt3: "五局三胜",
+        fmt5: "七局五胜",
+        historyTitle: "比赛记录",
+        btnStart: "▶ 开始下一局",
+        btnUndo: "↩ 撤销",
+        btnResetGame: "🔄 重置本局",
+        btnResetMatch: "⛔ 重置全场",
+        btnSave: "💾 保存",
+        btnExport: "📊 导出Excel",
+        serve: "发球：",
+        games: "局分：",
+        game: "第",
+        win: "胜",
+        vs: "对阵",
+        gameEnd: "本局结束",
+        matchEnd: "比赛结束",
+        nextServe: "下一局发球：",
+        saved: "比赛已保存",
+        exported: "导出功能下一步实现"
+    },
+    en: {
+        title: "Ping Pong Scoreboard",
+        labelA: "A:",
+        labelB: "B:",
+        showA: "Player A",
+        showB: "Player B",
+        phA: "Player A",
+        phB: "Player B",
+        phMatch: "Match Name",
+        voiceTip: "Enable Voice Control",
+        voiceOn: "Start Listening",
+        voiceOff: "Stop Listening",
+        listenOff: "Status: Off",
+        listenOn: "Status: Listening",
+        cmdTip: "Commands: mine yours his undo cancel",
+        voiceWaiting: "Voice: waiting",
+        voiceHeard: "Heard: ",
+        voiceExecuting: "Running: ",
+        voiceUnknown: "Unknown command: ",
+        btn11: "11 Points",
+        btn21: "21 Points",
+        fmt2: "Best of 3",
+        fmt3: "Best of 5",
+        fmt5: "Best of 7",
+        historyTitle: "Game History",
+        btnStart: "▶ Start Next Game",
+        btnUndo: "↩ Undo",
+        btnResetGame: "🔄 Reset Game",
+        btnResetMatch: "⛔ Reset Match",
+        btnSave: "💾 Save",
+        btnExport: "📊 Export Excel",
+        serve: "Serve: ",
+        games: "Games: ",
+        game: "Game ",
+        win: "Winner",
+        vs: "VS",
+        gameEnd: "Game over",
+        matchEnd: "Match over",
+        nextServe: "Next serve: ",
+        saved: "Match saved",
+        exported: "Export feature will be implemented next"
+    }
+};
+
+let lang = "zh";
+
+let game = {
+    mode: 11,
+    format: 2,
+    playerA: { points: 0, games: 0 },
+    playerB: { points: 0, games: 0 },
+    currentServer: "A",
+    history: [],
+    gameHistory: [],
+    locked: false,
+    matchOver: false
+};
+
+let recognition;
+let isListening = false;
+
+let pendingCommand = null;
+let pendingTimer = null;
+
+let lastExecutedCommand = "";
+let lastExecutedTime = 0;
+
+function getPlayerName(player) {
+    const t = texts[lang];
+    const value = document.getElementById(player === "A" ? "playerA" : "playerB").value.trim();
+    return value || (player === "A" ? t.showA : t.showB);
+}
+
+function normalizeCommand(text) {
+    return text
+        .toLowerCase()
+        .replace(/[，。！？,.!?]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function detectVoiceCommand(rawText) {
+    const cmd = normalizeCommand(rawText);
+
+    const isUndo =
+        cmd.includes("撤销") ||
+        cmd.includes("不算") ||
+        cmd.includes("undo") ||
+        cmd.includes("redo") ||
+        cmd.includes("cancel");
+
+    const isMine =
+        cmd.includes("我赢") ||
+        cmd.includes("我赢了") ||
+        cmd === "我" ||
+        cmd.includes("mine") ||
+        cmd.includes("my point") ||
+        cmd === "me" ||
+        cmd.includes("i win") ||
+        cmd.includes("i won");
+
+    const isOpponent =
+        cmd.includes("你赢") ||
+        cmd.includes("你赢了") ||
+        cmd.includes("他赢") ||
+        cmd.includes("他赢了") ||
+        cmd.includes("yours") ||
+        cmd.includes("your point") ||
+        cmd === "you" ||
+        cmd.includes("you win") ||
+        cmd.includes("you won") ||
+        cmd.includes("his") ||
+        cmd.includes("his point") ||
+        cmd.includes("he wins") ||
+        cmd.includes("he won");
+
+    if (isUndo) return { type: "undo", raw: rawText, normalized: cmd };
+    if (isMine) return { type: "A", raw: rawText, normalized: cmd };
+    if (isOpponent) return { type: "B", raw: rawText, normalized: cmd };
+
+    return { type: "unknown", raw: rawText, normalized: cmd };
+}
+
+function processVoiceCommand(rawText) {
+    const t = texts[lang];
+    const detected = detectVoiceCommand(rawText);
+
+    voiceDebug.textContent = t.voiceHeard + rawText;
+
+    if (pendingTimer) {
+        clearTimeout(pendingTimer);
+    }
+
+    pendingCommand = detected;
+
+    pendingTimer = setTimeout(() => {
+        executeVoiceCommand(pendingCommand);
+        pendingCommand = null;
+    }, 650);
+}
+
+function executeVoiceCommand(command) {
+    if (!command) return;
+
+    const t = texts[lang];
+
+    if (command.type === "unknown") {
+        voiceDebug.textContent = t.voiceUnknown + command.raw;
+        return;
+    }
+
+    const now = Date.now();
+    const commandKey = command.type + "|" + command.normalized;
+
+    if (commandKey === lastExecutedCommand && now - lastExecutedTime < 1400) {
+        return;
+    }
+
+    lastExecutedCommand = commandKey;
+    lastExecutedTime = now;
+
+    if (command.type === "undo") {
+        voiceDebug.textContent = t.voiceExecuting + (lang === "zh" ? "撤销" : "Undo");
+        undo();
+        return;
+    }
+
+    if (command.type === "A") {
+        voiceDebug.textContent = t.voiceExecuting + getPlayerName("A");
+        addPoint("A");
+        return;
+    }
+
+    if (command.type === "B") {
+        voiceDebug.textContent = t.voiceExecuting + getPlayerName("B");
+        addPoint("B");
+        return;
+    }
+}
+
+function initVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        alert(lang === "zh" ? "当前浏览器不支持语音识别，请使用 Safari 或 Chrome 测试。" : "Voice recognition is not supported in this browser.");
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
+
+    updateVoiceLang();
+
+    recognition.onstart = () => {
+        listenStatus.textContent = texts[lang].listenOn;
+        voiceDebug.textContent = texts[lang].voiceWaiting;
+    };
+
+    recognition.onresult = (event) => {
+        const result = event.results[event.results.length - 1];
+        if (!result.isFinal) return;
+
+        let bestText = "";
+
+        for (let i = 0; i < result.length; i++) {
+            if (result[i] && result[i].transcript) {
+                bestText = result[i].transcript;
+                break;
+            }
+        }
+
+        if (bestText) {
+            processVoiceCommand(bestText);
+        }
+    };
+
+    recognition.onerror = (event) => {
+        voiceDebug.textContent = lang === "zh"
+            ? "语音错误：" + event.error
+            : "Voice error: " + event.error;
+        console.warn("voice error:", event.error);
+    };
+
+    recognition.onend = () => {
+        if (isListening) {
+            setTimeout(() => {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.warn("voice restart failed:", e);
+                }
+            }, 250);
+        }
+    };
+}
+
+function updateVoiceLang() {
+    if (!recognition) return;
+    recognition.lang = lang === "zh" ? "zh-CN" : "en-US";
+}
+
+function toggleVoice() {
+    if (!recognition) initVoice();
+    if (!recognition) return;
+
+    const t = texts[lang];
+
+    if (!isListening) {
+        isListening = true;
+
+        try {
+            recognition.start();
+        } catch (e) {
+            console.warn(e);
+        }
+
+        voiceToggle.textContent = t.voiceOff;
+        voiceToggle.classList.add("on");
+        listenStatus.textContent = t.listenOn;
+        voiceDebug.textContent = t.voiceWaiting;
+    } else {
+        isListening = false;
+
+        try {
+            recognition.stop();
+        } catch (e) {
+            console.warn(e);
+        }
+
+        voiceToggle.textContent = t.voiceOn;
+        voiceToggle.classList.remove("on");
+        listenStatus.textContent = t.listenOff;
+        voiceDebug.textContent = t.voiceWaiting;
+    }
+}
+
+function speak(text) {
+    if ("speechSynthesis" in window) {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = lang === "zh" ? "zh-CN" : "en-US";
+        u.rate = 1.12;
+        speechSynthesis.speak(u);
+    }
+}
+
+function updateDisplay() {
+    const t = texts[lang];
+
+    scoreA.textContent = game.playerA.points;
+    scoreB.textContent = game.playerB.points;
+
+    showAName.textContent = getPlayerName("A");
+    showBName.textContent = getPlayerName("B");
+
+    gameScore.textContent = `${t.games} ${game.playerA.games} : ${game.playerB.games}`;
+    server.textContent = t.serve + getPlayerName(game.currentServer);
+    vsText.textContent = t.vs;
+}
+
+function updateHistoryDisplay() {
+    historyList.innerHTML = "";
+    const t = texts[lang];
+
+    game.gameHistory.forEach(g => {
+        const d = document.createElement("div");
+        d.className = "history-item";
+
+        const nameA = g.nameA || getPlayerName("A");
+        const nameB = g.nameB || getPlayerName("B");
+        const winner = g.winner === "A" ? nameA : nameB;
+
+        if (lang === "zh") {
+            d.textContent = `${t.game}${g.gameNum}局: ${nameA} ${g.a} - ${g.b} ${nameB} (${t.win}: ${winner})`;
+        } else {
+            d.textContent = `${t.game}${g.gameNum}: ${nameA} ${g.a} - ${g.b} ${nameB} (${t.win}: ${winner})`;
+        }
+
+        historyList.appendChild(d);
+    });
+}
+
+function isGameWin() {
+    const a = game.playerA.points;
+    const b = game.playerB.points;
+
+    return (a >= game.mode || b >= game.mode) && Math.abs(a - b) >= 2;
+}
+
+function isMatchOver() {
+    return game.playerA.games >= game.format || game.playerB.games >= game.format;
+}
+
+function finishGame() {
+    if (game.matchOver) return;
+
+    const a = game.playerA.points;
+    const b = game.playerB.points;
+    const winner = a > b ? "A" : "B";
+
+    game.gameHistory.push({
+        gameNum: game.playerA.games + game.playerB.games + 1,
+        a,
+        b,
+        winner,
+        nameA: getPlayerName("A"),
+        nameB: getPlayerName("B")
+    });
+
+    if (winner === "A") {
+        game.playerA.games++;
+    } else {
+        game.playerB.games++;
+    }
+
+    updateDisplay();
+    updateHistoryDisplay();
+
+    const t = texts[lang];
+    const winnerName = getPlayerName(winner);
+
+    if (isMatchOver()) {
+        game.matchOver = true;
+
+        const msg = lang === "zh"
+            ? `${t.matchEnd}，${winnerName}获胜！`
+            : `${t.matchEnd}. ${winnerName} wins!`;
+
+        alertBox.textContent = msg;
+        speak(msg);
+        alert(msg);
+        return;
+    }
+
+    const gameMsg = lang === "zh"
+        ? `${t.gameEnd}，${winnerName}胜，${a}比${b}`
+        : `${t.gameEnd}. ${winnerName} wins ${a} to ${b}`;
+
+    alertBox.textContent = gameMsg;
+    speak(gameMsg);
+
+    game.currentServer = game.currentServer === "A" ? "B" : "A";
+
+    setTimeout(() => {
+        const serveMsg = t.nextServe + getPlayerName(game.currentServer);
+        alertBox.textContent = serveMsg;
+        speak(serveMsg);
+        updateDisplay();
+    }, 900);
+}
+
+function addPoint(player) {
+    if (game.locked || game.matchOver) return;
+
+    game.history = [{
+        a: { ...game.playerA },
+        b: { ...game.playerB },
+        s: game.currentServer
+    }];
+
+    if (player === "A") {
+        game.playerA.points++;
+    } else {
+        game.playerB.points++;
+    }
+
+    const scoreText = lang === "zh"
+        ? `${game.playerA.points}比${game.playerB.points}`
+        : `${game.playerA.points} to ${game.playerB.points}`;
+
+    speak(scoreText);
+    updateDisplay();
+
+    if (isGameWin()) {
+        game.locked = true;
+        setTimeout(finishGame, 600);
+    }
+}
+
+function undo() {
+    if (game.locked || game.history.length === 0 || game.matchOver) return;
+
+    const last = game.history[0];
+
+    game.playerA = last.a;
+    game.playerB = last.b;
+    game.currentServer = last.s;
+    game.history = [];
+
+    const scoreText = lang === "zh"
+        ? `${game.playerA.points}比${game.playerB.points}`
+        : `${game.playerA.points} to ${game.playerB.points}`;
+
+    speak(scoreText);
+    updateDisplay();
+}
+
+function startNextGame() {
+    if (!game.locked || game.matchOver) return;
+
+    game.playerA.points = 0;
+    game.playerB.points = 0;
+    game.history = [];
+    game.locked = false;
+
+    alertBox.textContent = "";
+    updateDisplay();
+}
+
+function resetCurrent() {
+    game.playerA.points = 0;
+    game.playerB.points = 0;
+    game.history = [];
+    game.locked = false;
+
+    alertBox.textContent = "";
+    updateDisplay();
+}
+
+function resetAll() {
+    resetCurrent();
+
+    game.playerA.games = 0;
+    game.playerB.games = 0;
+    game.gameHistory = [];
+    game.matchOver = false;
+    game.currentServer = "A";
+
+    updateDisplay();
+    updateHistoryDisplay();
+}
+
+function setLanguage(l) {
+    lang = l;
+    const t = texts[l];
+
+    title.textContent = t.title;
+    labelA.textContent = t.labelA;
+    labelB.textContent = t.labelB;
+
+    playerA.placeholder = t.phA;
+    playerB.placeholder = t.phB;
+    matchName.placeholder = t.phMatch;
+
+    voiceTip.textContent = t.voiceTip;
+    cmdTip.textContent = t.cmdTip;
+    voiceDebug.textContent = t.voiceWaiting;
+
+    btn11.textContent = t.btn11;
+    btn21.textContent = t.btn21;
+
+    fmt2.textContent = t.fmt2;
+    fmt3.textContent = t.fmt3;
+    fmt5.textContent = t.fmt5;
+
+    historyTitle.textContent = t.historyTitle;
+
+    btnStart.textContent = t.btnStart;
+    btnUndo.textContent = t.btnUndo;
+    btnResetGame.textContent = t.btnResetGame;
+    btnResetMatch.textContent = t.btnResetMatch;
+    btnSave.textContent = t.btnSave;
+    btnExport.textContent = t.btnExport;
+
+    if (isListening) {
+        voiceToggle.textContent = t.voiceOff;
+        listenStatus.textContent = t.listenOn;
+    } else {
+        voiceToggle.textContent = t.voiceOn;
+        listenStatus.textContent = t.listenOff;
+    }
+
+    updateVoiceLang();
+    updateDisplay();
+    updateHistoryDisplay();
+}
+
+document.querySelectorAll(".lang-btn").forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        setLanguage(btn.dataset.lang);
+    };
+});
+
+document.querySelectorAll(".mode-btn").forEach(btn => {
+    btn.onclick = () => {
+        game.mode = Number(btn.dataset.mode);
+
+        document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        resetAll();
+    };
+});
+
+document.querySelectorAll(".format-btn").forEach(btn => {
+    btn.onclick = () => {
+        game.format = Number(btn.dataset.format);
+
+        document.querySelectorAll(".format-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        resetAll();
+    };
+});
+
+playerA.addEventListener("input", () => {
+    updateDisplay();
+    updateHistoryDisplay();
+});
+
+playerB.addEventListener("input", () => {
+    updateDisplay();
+    updateHistoryDisplay();
+});
+
+voiceToggle.onclick = toggleVoice;
+
+function saveGame() {
+    localStorage.setItem("pingpong_score_game", JSON.stringify(game));
+    alert(texts[lang].saved);
+}
+
+function exportExcel() {
+    alert(texts[lang].exported);
+}
+
+updateDisplay();
+updateHistoryDisplay();
+</script>
+</body>
+</html>
