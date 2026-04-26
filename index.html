@@ -73,6 +73,7 @@ h1{text-align:center;font-size:20px;margin-bottom:16px;color:#111}
 </div>
 
 <div class="game-history"><h3 id="historyTitle">比赛记录</h3><div id="historyList"></div></div>
+<div class="game-history"><h3>已保存比赛 / Saved Matches</h3><div id="savedMatchList"></div></div>
 <div class="alert" id="alertBox"></div>
 
 <div class="control-buttons"><button class="control-btn start-btn" id="btnStart" onclick="startNextGame()">▶ 开始下一局</button></div>
@@ -210,9 +211,76 @@ document.querySelectorAll(".format-btn").forEach(btn=>{btn.onclick=()=>{game.for
 $("playerA").addEventListener("input",()=>{updateDisplay();updateHistoryDisplay()});
 $("playerB").addEventListener("input",()=>{updateDisplay();updateHistoryDisplay()});
 $("voiceToggle").onclick=toggleVoice;
-function saveGame(){localStorage.setItem("pingpong_score_game",JSON.stringify(game));alert(texts[lang].saved)}
-function exportExcel(){alert(texts[lang].exported)}
-updateDisplay();updateHistoryDisplay();
+function getMatchSnapshot(){
+const name=$("matchName").value.trim()||new Date().toLocaleString();
+return{
+name,
+savedAt:new Date().toLocaleString(),
+mode:game.mode,
+format:game.format,
+playerA:getPlayerName("A"),
+playerB:getPlayerName("B"),
+gamesA:game.playerA.games,
+gamesB:game.playerB.games,
+currentA:game.playerA.points,
+currentB:game.playerB.points,
+history:game.gameHistory
+};
+}
+function getSavedMatches(){
+try{return JSON.parse(localStorage.getItem("pingpong_saved_matches")||"[]")}catch(e){return[]}
+}
+function saveGame(){
+const matches=getSavedMatches();
+matches.unshift(getMatchSnapshot());
+localStorage.setItem("pingpong_saved_matches",JSON.stringify(matches));
+renderSavedMatches();
+alert(texts[lang].saved);
+}
+function renderSavedMatches(){
+const box=$("savedMatchList");
+if(!box)return;
+const matches=getSavedMatches();
+box.innerHTML="";
+if(matches.length===0){box.innerHTML='<div class="history-item">暂无保存记录 / No saved matches</div>';return}
+matches.slice(0,20).forEach((m,index)=>{
+const d=document.createElement("div");
+d.className="history-item";
+d.textContent=`${index+1}. ${m.name} - ${m.playerA} ${m.gamesA}:${m.gamesB} ${m.playerB} (${m.savedAt})`;
+box.appendChild(d);
+});
+}
+function csvEscape(value){
+const s=String(value==null?"":value);
+return '"'+s.replace(/"/g,'""')+'"';
+}
+function exportExcel(){
+const matches=getSavedMatches();
+if(matches.length===0){alert(lang==="zh"?"还没有保存的比赛，请先点击保存。":"No saved matches yet. Please save first.");return}
+const rows=[];
+rows.push(["Match Name","Saved At","Mode","Format","Player A","Player B","Games A","Games B","Game No","Score A","Score B","Winner"]);
+matches.forEach(m=>{
+if(m.history&&m.history.length){
+m.history.forEach(g=>{
+rows.push([m.name,m.savedAt,m.mode,m.format,m.playerA,m.playerB,m.gamesA,m.gamesB,g.gameNum,g.a,g.b,g.winner==="A"?m.playerA:m.playerB]);
+});
+}else{
+rows.push([m.name,m.savedAt,m.mode,m.format,m.playerA,m.playerB,m.gamesA,m.gamesB,"","","",""]);
+}
+});
+const csv=rows.map(r=>r.map(csvEscape).join(",")).join("
+");
+const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");
+a.href=url;
+a.download="pingpong_matches.csv";
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+}
+updateDisplay();updateHistoryDisplay();renderSavedMatches();
 </script>
 </body>
 </html>
