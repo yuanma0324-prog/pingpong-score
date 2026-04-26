@@ -40,6 +40,7 @@
 const T={zh:{title:'乒乓球计分器',A:'甲：',B:'乙：',pA:'球员甲',pB:'球员乙',match:'比赛名称',on:'开启监听',off:'关闭监听',stOff:'状态：未开启',stOn:'状态：监听中',wait:'语音：等待输入',heard:'识别：',run:'执行：',unknown:'未识别：',tip:'中文：我赢 / 你赢 / 他赢 / 撤销 / 不算<br>English: mine / me / my point / you / your point / his / he / hey / undo / cancel',note:'手机上先点“测试声音”，再点“开启监听”。英文模式会使用英文识别模型。',m11:'11分制',m21:'21分制',f2:'三局两胜',f3:'五局三胜',f5:'七局五胜',vs:'对阵',serve:'发球：',games:'局分：',hist:'本场比赛记录',saved:'已保存比赛',next:'▶ 开始下一局',undo:'↩ 撤销',resetG:'🔄 重置本局',resetA:'⛔ 重置全场',save:'💾 保存',export:'📊 导出CSV',ready:'声音已开启',sound:'测试声音，1比0',change:'换发球，',serveWord:'发球',game:'第',win:'胜',gameEnd:'本局结束',matchEnd:'比赛结束',nextServe:'下一局发球：',savedMsg:'比赛已保存',noSaved:'暂无保存记录',needSave:'还没有保存的比赛，请先点击保存。',clearHist:'🗑 清空历史',prevPage:'上一页',nextPage:'下一页'},en:{title:'Ping Pong Scoreboard',A:'A:',B:'B:',pA:'Player A',pB:'Player B',match:'Match Name',on:'Start Listening',off:'Stop Listening',stOff:'Status: Off',stOn:'Status: Listening',wait:'Voice: waiting',heard:'Heard: ',run:'Running: ',unknown:'Unknown: ',tip:'Chinese: 我赢 / 你赢 / 他赢 / 撤销 / 不算<br>English: mine / me / my point / you / your point / his / he / hey / undo / cancel',note:'On phone, tap Test Sound first, then Start Listening. English mode uses English recognition.',m11:'11 Points',m21:'21 Points',f2:'Best of 3',f3:'Best of 5',f5:'Best of 7',vs:'VS',serve:'Serve: ',games:'Games: ',hist:'Current Match',saved:'Saved Matches',next:'▶ Start Next Game',undo:'↩ Undo',resetG:'🔄 Reset Game',resetA:'⛔ Reset Match',save:'💾 Save',export:'📊 Export CSV',ready:'Voice is ready',sound:'Sound test, one to zero',change:'Service change. ',serveWord:' serves',game:'Game ',win:'Winner',gameEnd:'Game over',matchEnd:'Match over',nextServe:'Next serve: ',savedMsg:'Match saved',noSaved:'No saved matches',needSave:'No saved matches yet. Please save first.',clearHist:'🗑 Clear History',prevPage:'Previous',nextPage:'Next'}};
 let lang='zh', recognition=null, listening=false, voices=[], pending=null, timer=null, lastCmd='', lastTime=0;
 let savedPage=0, savedPageSize=5, expandedSavedIndex=null;
+let lastPointTime=0, pointDebounceMs=800;
 let game={mode:11,format:2,A:{p:0,g:0},B:{p:0,g:0},start:'A',server:'A',history:[],games:[],locked:false,over:false};
 const $=id=>document.getElementById(id);
 function tx(){return T[lang]} function name(p){let v=$(p==='A'?'playerA':'playerB').value.trim();return v||(p==='A'?tx().pA:tx().pB)}
@@ -58,12 +59,43 @@ function serveInterval(){let a=game.A.p,b=game.B.p;if(a>=game.mode-1&&b>=game.mo
 function calcServer(){let total=game.A.p+game.B.p,sw=Math.floor(total/serveInterval());return sw%2===0?game.start:(game.start==='A'?'B':'A')}
 function scoreByServer(){let s=game.server,sp=s==='A'?game.A.p:game.B.p,rp=s==='A'?game.B.p:game.A.p;return lang==='zh'?`${sp}比${rp}`:`${sp} to ${rp}`}
 function announceChange(oldS,newS){if(oldS===newS)return;let msg=lang==='zh'?`${tx().change}${name(newS)}${tx().serveWord}`:`${tx().change}${name(newS)}${tx().serveWord}`;$('alertBox').textContent=msg;speak(msg)}
-function addPoint(p){if(game.locked||game.over)return;let old=game.server;game.history=[JSON.parse(JSON.stringify(game))];game[p].p++;game.server=calcServer();render();announceChange(old,game.server);speak(scoreByServer());if(isGameWin()){game.locked=true;setTimeout(finishGame,700)}}
+function addPoint(p){
+if(game.locked||game.over)return;
+let now=Date.now();
+if(now-lastPointTime<pointDebounceMs){
+$('alertBox').textContent=lang==='zh'?'操作太快，已忽略重复加分':'Too fast. Duplicate point ignored';
+return;
+}
+lastPointTime=now;
+let old=game.server;
+game.history=[JSON.parse(JSON.stringify(game))];
+game[p].p++;
+game.server=calcServer();
+render();
+announceChange(old,game.server);
+speak(scoreByServer());
+if(isGameWin()){game.locked=true;setTimeout(finishGame,700)}
+}
 function isGameWin(){return(game.A.p>=game.mode||game.B.p>=game.mode)&&Math.abs(game.A.p-game.B.p)>=2} function isMatchOver(){return game.A.g>=game.format||game.B.g>=game.format}
 function finishGame(){if(game.over)return;let a=game.A.p,b=game.B.p,w=a>b?'A':'B';game.games.push({no:game.A.g+game.B.g+1,a,b,w,nameA:name('A'),nameB:name('B')});game[w].g++;renderHistory();render();if(isMatchOver()){game.over=true;let msg=lang==='zh'?`${tx().matchEnd}，${name(w)}获胜！`:`${tx().matchEnd}. ${name(w)} wins!`;$('alertBox').textContent=msg;speak(msg);alert(msg);return}let msg=lang==='zh'?`${tx().gameEnd}，${name(w)}胜，${a}比${b}`:`${tx().gameEnd}. ${name(w)} wins ${a} to ${b}`;$('alertBox').textContent=msg;speak(msg);game.server=game.server==='A'?'B':'A';game.start=game.server;setTimeout(()=>{let m=tx().nextServe+name(game.server);$('alertBox').textContent=m;speak(m);render()},900)}
-function undo(){if(game.locked||!game.history.length||game.over)return;game=game.history.pop();render();renderHistory();speak(scoreByServer())}
-function startNextGame(){if(!game.locked||game.over)return;game.A.p=0;game.B.p=0;game.history=[];game.start=game.server;game.locked=false;$('alertBox').textContent='';render()}
-function resetCurrent(){game.A.p=0;game.B.p=0;game.server=game.start;game.history=[];game.locked=false;$('alertBox').textContent='';render()} function resetAll(){game={mode:game.mode,format:game.format,A:{p:0,g:0},B:{p:0,g:0},start:'A',server:'A',history:[],games:[],locked:false,over:false};$('alertBox').textContent='';render();renderHistory()}
+function undo(){
+if(game.locked||game.over)return;
+if(!game.history.length){
+$('alertBox').textContent=lang==='zh'?'只能撤回一次':'Only one undo allowed';
+return;
+}
+game=game.history.pop();
+game.history=[];
+lastPointTime=0;
+render();
+renderHistory();
+let score=scoreByServer();
+let msg=lang==='zh'?`分数已撤回，现在比分 ${score}`:`Score undone. Current score ${score}`;
+$('alertBox').textContent=msg;
+speak(msg);
+}
+function startNextGame(){if(!game.locked||game.over)return;game.A.p=0;game.B.p=0;game.history=[];game.start=game.server;game.locked=false;lastPointTime=0;$('alertBox').textContent='';render()}
+function resetCurrent(){game.A.p=0;game.B.p=0;game.server=game.start;game.history=[];game.locked=false;lastPointTime=0;$('alertBox').textContent='';render()} function resetAll(){game={mode:game.mode,format:game.format,A:{p:0,g:0},B:{p:0,g:0},start:'A',server:'A',history:[],games:[],locked:false,over:false};$('alertBox').textContent='';render();renderHistory()}
 function setMode(m){game.mode=m;document.querySelectorAll('#mode11,#mode21').forEach(b=>b.classList.add('gray'));$('mode'+m).classList.remove('gray');$('mode'+m).classList.add('active');resetAll();applyText()} function setFormat(f){game.format=f;[2,3,5].forEach(n=>{$('fmt'+n).classList.add('gray');$('fmt'+n).classList.remove('active')});$('fmt'+f).classList.remove('gray');$('fmt'+f).classList.add('active');resetAll();applyText()}
 function render(){$('scoreA').textContent=game.A.p;$('scoreB').textContent=game.B.p;$('showA').textContent=name('A');$('showB').textContent=name('B');$('serverText').textContent=tx().serve+name(game.server);$('gameScore').textContent=`${tx().games} ${game.A.g} : ${game.B.g}`}
 function renderHistory(){let box=$('historyList');box.innerHTML='';if(!game.games.length){box.innerHTML=`<div class="item">${lang==='zh'?'暂无记录':'No records'}</div>`;return}game.games.forEach(g=>{let d=document.createElement('div');d.className='item';let w=g.w==='A'?g.nameA:g.nameB;d.textContent=lang==='zh'?`${tx().game}${g.no}局：${g.nameA} ${g.a}-${g.b} ${g.nameB}（${tx().win}：${w}）`:`${tx().game}${g.no}: ${g.nameA} ${g.a}-${g.b} ${g.nameB} (${tx().win}: ${w})`;box.appendChild(d)})}
