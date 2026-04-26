@@ -31,7 +31,7 @@
 </div>
 <div class="alert" id="alertBox"></div>
 <div class="box"><h3 id="historyTitle">本场比赛记录</h3><div id="historyList"></div></div>
-<div class="box"><h3 id="savedTitle">已保存比赛</h3><div id="savedList"></div></div>
+<div class="box"><h3 id="savedTitle">已保存比赛</h3><div class="row"><button class="danger" id="clearSavedBtn" onclick="clearSavedMatches()">🗑 清空历史</button></div><div id="savedList"></div><div class="row"><button class="gray" onclick="prevSavedPage()">上一页</button><button class="gray" onclick="nextSavedPage()">下一页</button></div><div id="savedPageInfo" class="item"></div><div id="savedDetail"></div></div>
 <div class="row"><button class="green" id="nextBtn" onclick="startNextGame()">▶ 开始下一局</button></div>
 <div class="row"><button id="undoBtn" onclick="undo()">↩ 撤销</button><button id="resetGameBtn" onclick="resetCurrent()">🔄 重置本局</button><button class="danger" id="resetAllBtn" onclick="resetAll()">⛔ 重置全场</button></div>
 <div class="row"><button class="pink" id="saveBtn" onclick="saveMatch()">💾 保存</button><button class="orange" id="exportBtn" onclick="exportCSV()">📊 导出CSV</button></div>
@@ -39,6 +39,7 @@
 <script>
 const T={zh:{title:'乒乓球计分器',A:'甲：',B:'乙：',pA:'球员甲',pB:'球员乙',match:'比赛名称',on:'开启监听',off:'关闭监听',stOff:'状态：未开启',stOn:'状态：监听中',wait:'语音：等待输入',heard:'识别：',run:'执行：',unknown:'未识别：',tip:'中文：我赢 / 你赢 / 他赢 / 撤销 / 不算<br>English: mine / me / my point / you / your point / his / he / hey / undo / cancel',note:'手机上先点“测试声音”，再点“开启监听”。英文模式会使用英文识别模型。',m11:'11分制',m21:'21分制',f2:'三局两胜',f3:'五局三胜',f5:'七局五胜',vs:'对阵',serve:'发球：',games:'局分：',hist:'本场比赛记录',saved:'已保存比赛',next:'▶ 开始下一局',undo:'↩ 撤销',resetG:'🔄 重置本局',resetA:'⛔ 重置全场',save:'💾 保存',export:'📊 导出CSV',ready:'声音已开启',sound:'测试声音，1比0',change:'换发球，',serveWord:'发球',game:'第',win:'胜',gameEnd:'本局结束',matchEnd:'比赛结束',nextServe:'下一局发球：',savedMsg:'比赛已保存',noSaved:'暂无保存记录',needSave:'还没有保存的比赛，请先点击保存。'},en:{title:'Ping Pong Scoreboard',A:'A:',B:'B:',pA:'Player A',pB:'Player B',match:'Match Name',on:'Start Listening',off:'Stop Listening',stOff:'Status: Off',stOn:'Status: Listening',wait:'Voice: waiting',heard:'Heard: ',run:'Running: ',unknown:'Unknown: ',tip:'Chinese: 我赢 / 你赢 / 他赢 / 撤销 / 不算<br>English: mine / me / my point / you / your point / his / he / hey / undo / cancel',note:'On phone, tap Test Sound first, then Start Listening. English mode uses English recognition.',m11:'11 Points',m21:'21 Points',f2:'Best of 3',f3:'Best of 5',f5:'Best of 7',vs:'VS',serve:'Serve: ',games:'Games: ',hist:'Current Match',saved:'Saved Matches',next:'▶ Start Next Game',undo:'↩ Undo',resetG:'🔄 Reset Game',resetA:'⛔ Reset Match',save:'💾 Save',export:'📊 Export CSV',ready:'Voice is ready',sound:'Sound test, one to zero',change:'Service change. ',serveWord:' serves',game:'Game ',win:'Winner',gameEnd:'Game over',matchEnd:'Match over',nextServe:'Next serve: ',savedMsg:'Match saved',noSaved:'No saved matches',needSave:'No saved matches yet. Please save first.'}};
 let lang='zh', recognition=null, listening=false, voices=[], pending=null, timer=null, lastCmd='', lastTime=0;
+let savedPage=0, savedPageSize=5, expandedSavedIndex=null;
 let game={mode:11,format:2,A:{p:0,g:0},B:{p:0,g:0},start:'A',server:'A',history:[],games:[],locked:false,over:false};
 const $=id=>document.getElementById(id);
 function tx(){return T[lang]} function name(p){let v=$(p==='A'?'playerA':'playerB').value.trim();return v||(p==='A'?tx().pA:tx().pB)}
@@ -69,7 +70,69 @@ function renderHistory(){let box=$('historyList');box.innerHTML='';if(!game.game
 function snapshot(){return{name:$('matchName').value.trim()||new Date().toLocaleString(),time:new Date().toLocaleString(),mode:game.mode,format:game.format,A:name('A'),B:name('B'),gamesA:game.A.g,gamesB:game.B.g,currentA:game.A.p,currentB:game.B.p,history:game.games}}
 function saved(){try{return JSON.parse(localStorage.getItem('pp_matches_v14')||'[]')}catch(e){return[]}}
 function saveMatch(){let arr=saved();arr.unshift(snapshot());localStorage.setItem('pp_matches_v14',JSON.stringify(arr));renderSaved();alert(tx().savedMsg)}
-function renderSaved(){let box=$('savedList'),arr=saved();box.innerHTML='';if(!arr.length){box.innerHTML=`<div class="item">${tx().noSaved}</div>`;return}arr.slice(0,30).forEach((m,i)=>{let d=document.createElement('div');d.className='item';d.textContent=`${i+1}. ${m.name} - ${m.A} ${m.gamesA}:${m.gamesB} ${m.B} (${m.time})`;box.appendChild(d)})}
+function renderSaved(){
+let box=$('savedList'),detail=$('savedDetail'),info=$('savedPageInfo'),arr=saved();
+box.innerHTML='';detail.innerHTML='';
+if(!arr.length){box.innerHTML=`<div class="item">${tx().noSaved}</div>`;if(info)info.textContent='';return}
+let totalPages=Math.max(1,Math.ceil(arr.length/savedPageSize));
+if(savedPage>=totalPages)savedPage=totalPages-1;
+if(savedPage<0)savedPage=0;
+let start=savedPage*savedPageSize;
+let pageItems=arr.slice(start,start+savedPageSize);
+pageItems.forEach((m,i)=>{
+let realIndex=start+i;
+let d=document.createElement('div');
+d.className='item';
+d.innerHTML=`<div><b>${realIndex+1}. ${m.name}</b></div><div>${m.A} ${m.gamesA}:${m.gamesB} ${m.B}</div><div>${m.time}</div><div style="margin-top:5px"><button class="gray" onclick="toggleSavedDetail(${realIndex})">${expandedSavedIndex===realIndex?(lang==='zh'?'收起':'Hide'):(lang==='zh'?'详情':'Details')}</button><button class="danger" onclick="deleteSavedMatch(${realIndex})">${lang==='zh'?'删除':'Delete'}</button></div>`;
+box.appendChild(d);
+});
+if(info)info.textContent=lang==='zh'?`第 ${savedPage+1} / ${totalPages} 页，共 ${arr.length} 条`:`Page ${savedPage+1} / ${totalPages}, ${arr.length} records`;
+if(expandedSavedIndex!==null&&arr[expandedSavedIndex])renderSavedDetail(arr[expandedSavedIndex],expandedSavedIndex);
+}
+function renderSavedDetail(m,index){
+let detail=$('savedDetail');
+if(!detail)return;
+let rows=[];
+rows.push(`<div class="box"><h3>${lang==='zh'?'比赛详情':'Match Detail'} #${index+1}</h3>`);
+rows.push(`<div class="item"><b>${m.name}</b></div>`);
+rows.push(`<div class="item">${m.A} ${m.gamesA}:${m.gamesB} ${m.B}</div>`);
+rows.push(`<div class="item">${m.time}</div>`);
+rows.push(`<div class="item">${lang==='zh'?'赛制':'Mode'}: ${m.mode} ${lang==='zh'?'分制':'points'}, ${lang==='zh'?'胜局':'best target'} ${m.format}</div>`);
+if(m.history&&m.history.length){
+rows.push(`<hr>`);
+m.history.forEach(g=>{
+let winner=g.w==='A'?m.A:m.B;
+rows.push(`<div class="item">${lang==='zh'?'第':'Game '}${g.no}${lang==='zh'?'局':''}: ${m.A} ${g.a}-${g.b} ${m.B} (${lang==='zh'?'胜者':'Winner'}: ${winner})</div>`);
+});
+}else{
+rows.push(`<div class="item">${lang==='zh'?'没有完整局分记录':'No game-by-game history'}</div>`);
+}
+rows.push(`</div>`);
+detail.innerHTML=rows.join('');
+}
+function toggleSavedDetail(index){
+expandedSavedIndex=expandedSavedIndex===index?null:index;
+renderSaved();
+}
+function deleteSavedMatch(index){
+let arr=saved();
+if(!arr[index])return;
+let ok=confirm(lang==='zh'?'确定删除这条比赛记录吗？':'Delete this saved match?');
+if(!ok)return;
+arr.splice(index,1);
+localStorage.setItem('pp_matches_v14',JSON.stringify(arr));
+if(expandedSavedIndex===index)expandedSavedIndex=null;
+if(expandedSavedIndex!==null&&expandedSavedIndex>index)expandedSavedIndex--;
+renderSaved();
+}
+function clearSavedMatches(){
+let ok=confirm(lang==='zh'?'确定清空所有已保存比赛吗？这个操作不能撤销。':'Clear all saved matches? This cannot be undone.');
+if(!ok)return;
+localStorage.removeItem('pp_matches_v14');
+savedPage=0;expandedSavedIndex=null;renderSaved();
+}
+function prevSavedPage(){savedPage--;renderSaved()}
+function nextSavedPage(){savedPage++;renderSaved()}
 function esc(v){return '"'+String(v??'').replace(/"/g,'""')+'"'} function exportCSV(){let arr=saved();if(!arr.length){alert(tx().needSave);return}let rows=[['Match','Saved At','Mode','Format','Player A','Player B','Games A','Games B','Game No','Score A','Score B','Winner']];arr.forEach(m=>{if(m.history&&m.history.length){m.history.forEach(g=>rows.push([m.name,m.time,m.mode,m.format,m.A,m.B,m.gamesA,m.gamesB,g.no,g.a,g.b,g.w==='A'?m.A:m.B]))}else rows.push([m.name,m.time,m.mode,m.format,m.A,m.B,m.gamesA,m.gamesB,'','','',''])});let csv=rows.map(r=>r.map(esc).join(',')).join('\n'),blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pingpong_matches.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
 function setLang(l){lang=l;$('langZh').className=l==='zh'?'active':'gray';$('langEn').className=l==='en'?'active':'gray';setVoiceLang();applyText();render();renderHistory();renderSaved()}
 function applyText(){let t=tx();$('title').textContent=t.title;$('labelA').textContent=t.A;$('labelB').textContent=t.B;$('playerA').placeholder=t.pA;$('playerB').placeholder=t.pB;$('matchName').placeholder=t.match;$('voiceBtn').textContent=listening?t.off:t.on;$('listenStatus').textContent=listening?t.stOn:t.stOff;$('cmdTip').innerHTML=t.tip;$('voiceNote').textContent=t.note;$('voiceDebug').textContent=t.wait;$('mode11').textContent=t.m11;$('mode21').textContent=t.m21;$('fmt2').textContent=t.f2;$('fmt3').textContent=t.f3;$('fmt5').textContent=t.f5;$('vsText').textContent=t.vs;$('historyTitle').textContent=t.hist;$('savedTitle').textContent=t.saved;$('nextBtn').textContent=t.next;$('undoBtn').textContent=t.undo;$('resetGameBtn').textContent=t.resetG;$('resetAllBtn').textContent=t.resetA;$('saveBtn').textContent=t.save;$('exportBtn').textContent=t.export}
