@@ -616,13 +616,17 @@ function getServerForCurrentScore() {
 
 function buildScoreTextByServer() {
     const server = game.currentServer;
-    const serverName = getPlayerName(server);
     const receiver = server === "A" ? "B" : "A";
     const serverPoints = server === "A" ? game.playerA.points : game.playerB.points;
     const receiverPoints = receiver === "A" ? game.playerA.points : game.playerB.points;
 
+    // v1.2：只按发球方顺序报分，不再每次重复“谁发球”
     if (lang === "zh") {
-        return `${serverName}发球，${serverPoints}比${receiverPoints}`;
+        return `${serverPoints}比${receiverPoints}`;
+    }
+
+    return `${serverPoints} to ${receiverPoints}`;
+}发球，${serverPoints}比${receiverPoints}`;
     }
 
     return `${serverName} serves, ${serverPoints} to ${receiverPoints}`;
