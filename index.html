@@ -250,6 +250,7 @@ let game = {
     format: 2,
     playerA: { points: 0, games: 0 },
     playerB: { points: 0, games: 0 },
+    startServer: "A",
     currentServer: "A",
     history: [],
     gameHistory: [],
@@ -593,6 +594,59 @@ function isGameWin() {
     return (a >= game.mode || b >= game.mode) && Math.abs(a - b) >= 2;
 }
 
+function getServeInterval() {
+    // 11分制：每2分换发；10平以后每1分换发。
+    // 21分制：每5分换发；20平以后每1分换发。
+    const a = game.playerA.points;
+    const b = game.playerB.points;
+    const isDeuceArea = a >= game.mode - 1 && b >= game.mode - 1;
+
+    if (isDeuceArea) return 1;
+    return game.mode === 21 ? 5 : 2;
+}
+
+function getServerForCurrentScore() {
+    const totalPoints = game.playerA.points + game.playerB.points;
+    const interval = getServeInterval();
+    const switches = Math.floor(totalPoints / interval);
+
+    if (switches % 2 === 0) return game.startServer;
+    return game.startServer === "A" ? "B" : "A";
+}
+
+function buildScoreTextByServer() {
+    const server = game.currentServer;
+    const serverName = getPlayerName(server);
+    const receiver = server === "A" ? "B" : "A";
+    const serverPoints = server === "A" ? game.playerA.points : game.playerB.points;
+    const receiverPoints = receiver === "A" ? game.playerA.points : game.playerB.points;
+
+    if (lang === "zh") {
+        return `${serverName}发球，${serverPoints}比${receiverPoints}`;
+    }
+
+    return `${serverName} serves, ${serverPoints} to ${receiverPoints}`;
+}
+
+function announceServeChange(oldServer, newServer) {
+    if (oldServer === newServer) return;
+
+    const serverName = getPlayerName(newServer);
+    const msg = lang === "zh"
+        ? `换发球，${serverName}发球`
+        : `Service change. ${serverName} serves`;
+
+    alertBox.textContent = msg;
+    speak(msg);
+}
+
+function refreshServerAfterPointAndAnnounce(oldServer) {
+    const newServer = getServerForCurrentScore();
+    game.currentServer = newServer;
+    updateDisplay();
+    announceServeChange(oldServer, newServer);
+}
+
 function isMatchOver() {
     return game.playerA.games >= game.format || game.playerB.games >= game.format;
 }
@@ -643,6 +697,7 @@ function finishGame() {
     speak(gameMsg);
 
     game.currentServer = game.currentServer === "A" ? "B" : "A";
+    game.startServer = game.currentServer;
 
     setTimeout(() => {
         const serveMsg = t.nextServe + getPlayerName(game.currentServer);
@@ -655,21 +710,22 @@ function finishGame() {
 function addPoint(player) {
     if (game.locked || game.matchOver) return;
 
+    const oldServer = game.currentServer;
+
     game.history = [{
         a: { ...game.playerA },
         b: { ...game.playerB },
-        s: game.currentServer
+        s: game.currentServer,
+        startServer: game.startServer
     }];
 
     if (player === "A") game.playerA.points++;
     else game.playerB.points++;
 
-    const scoreText = lang === "zh"
-        ? `${game.playerA.points}比${game.playerB.points}`
-        : `${game.playerA.points} to ${game.playerB.points}`;
+    refreshServerAfterPointAndAnnounce(oldServer);
 
+    const scoreText = buildScoreTextByServer();
     speak(scoreText);
-    updateDisplay();
 
     if (isGameWin()) {
         game.locked = true;
@@ -685,11 +741,10 @@ function undo() {
     game.playerA = last.a;
     game.playerB = last.b;
     game.currentServer = last.s;
+    game.startServer = last.startServer || game.startServer;
     game.history = [];
 
-    const scoreText = lang === "zh"
-        ? `${game.playerA.points}比${game.playerB.points}`
-        : `${game.playerA.points} to ${game.playerB.points}`;
+    const scoreText = buildScoreTextByServer();
 
     speak(scoreText);
     updateDisplay();
@@ -701,6 +756,7 @@ function startNextGame() {
     game.playerA.points = 0;
     game.playerB.points = 0;
     game.history = [];
+    game.startServer = game.currentServer;
     game.locked = false;
 
     alertBox.textContent = "";
@@ -711,6 +767,7 @@ function resetCurrent() {
     game.playerA.points = 0;
     game.playerB.points = 0;
     game.history = [];
+    game.currentServer = game.startServer;
     game.locked = false;
 
     alertBox.textContent = "";
@@ -724,6 +781,7 @@ function resetAll() {
     game.playerB.games = 0;
     game.gameHistory = [];
     game.matchOver = false;
+    game.startServer = "A";
     game.currentServer = "A";
 
     updateDisplay();
